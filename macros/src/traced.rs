@@ -9,12 +9,16 @@ use syn::*;
 mod kw {
     syn::custom_keyword!(level);
     syn::custom_keyword!(fields);
+    syn::custom_keyword!(err);
+    syn::custom_keyword!(ret);
 }
 
 #[derive(Default)]
 struct TracedArgs {
     level: Option<Level>,
     fields: Option<Fields>,
+    emit_error: Option<FormatMode>,
+    emit_return: Option<FormatMode>,
 }
 
 impl Parse for TracedArgs {
@@ -28,6 +32,12 @@ impl Parse for TracedArgs {
                 args.level = Some(input.parse()?);
             } else if lookahead.peek(kw::fields) {
                 args.fields = Some(input.parse()?);
+            } else if lookahead.peek(kw::err) {
+                let _ = input.parse::<kw::err>()?;
+                args.emit_error = Some(input.parse()?);
+            } else if lookahead.peek(kw::ret) {
+                let _ = input.parse::<kw::ret>()?;
+                args.emit_return = Some(input.parse()?);
             } else if lookahead.peek(Token![,]) {
                 let _ = input.parse::<Token![,]>()?;
             } else {
@@ -113,6 +123,36 @@ impl Parse for Field {
         };
 
         Ok(Self { name, value })
+    }
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FormatMode {
+    #[default]
+    Debug,
+    Display,
+}
+
+impl Parse for FormatMode {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        if !input.peek(syn::token::Paren) {
+            return Ok(Self::default());
+        }
+
+        let content;
+        let _ = syn::parenthesized!(content in input);
+
+        let mode = if let Some(ident) = content.parse::<Option<Ident>>()? {
+            match ident.to_string().as_str() {
+                "Debug" => FormatMode::Debug,
+                "Display" => FormatMode::Display,
+                _ => return Err(syn::Error::new(ident.span(), "expected either `Debug` or `Display`")),
+            }
+        } else {
+            return Err(syn::Error::new(content.span(), "expected either `Debug` or `Display`"));
+        };
+
+        Ok(mode)
     }
 }
 
@@ -219,21 +259,76 @@ fn build_block(args: &TracedArgs, input: &ItemFn) -> proc_macro2::TokenStream {
         quote! {}
     };
 
+    let target = quote! { concat!(module_path!(), "::", stringify!(#ident)) };
+
     let enter_span_guard = quote! {
         let __guard = libftrace::with_subscriber(|s| {
             s.enter_span(
-                libftrace::SpanMetadata::new(
-                    concat!(module_path!(), "::", stringify!(#ident)),
-                    #level
-                )
+                libftrace::SpanMetadata::new(#target, #level)
                     #fields
             )
         })
     };
 
+    let err_event = match args.emit_error {
+        Some(FormatMode::Display) => quote! {
+            ::libftrace::error!(#target, error = format!("{e}"))
+        },
+        None | Some(FormatMode::Debug) => quote! {
+            ::libftrace::error!(#target, error = format!("{e:?}"))
+        },
+    };
+
+    let ret_event = match args.emit_return {
+        Some(FormatMode::Display) => quote! {
+            ::libftrace::event!(level: #level, #target, ret = format!("{x}"))
+        },
+        None | Some(FormatMode::Debug) => quote! {
+            ::libftrace::event!(level: #level, #target, ret = format!("{x:?}"))
+        },
+    };
+
+    let block_result_emit = match (args.emit_error, args.emit_return) {
+        (Some(_), Some(_)) => quote! {
+            #[allow(clippy::redundant_closure_call)]
+            match (move || #block)() {
+                #[allow(clippy::unit_arg)]
+                Ok(x) => {
+                    #ret_event;
+                    Ok(x)
+                },
+                Err(e) => {
+                    #err_event;
+                    Err(e)
+                }
+            }
+        },
+        (Some(_), None) => quote! {
+            #[allow(clippy::redundant_closure_call)]
+            match (move || #block)() {
+                #[allow(clippy::unit_arg)]
+                Ok(x) => Ok(x),
+                Err(e) => {
+                    #err_event;
+                    Err(e)
+                }
+            }
+        },
+        (None, Some(_)) => quote! {
+            #[allow(clippy::redundant_closure_call)]
+            let x = (move || #block)();
+            #ret_event;
+
+            x
+        },
+        (None, None) => quote! {
+            #block
+        },
+    };
+
     quote! {
         #enter_span_guard;
 
-        #block
+        #block_result_emit
     }
 }

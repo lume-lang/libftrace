@@ -29,7 +29,7 @@ macro_rules! event {
             s.event($crate::EventMetadata::new(format!($fmt), $level));
         });
     };
-    (level: $level:expr, $fmt:expr, $($args:expr)*) => {
+    (level: $level:expr, $fmt:expr, $($args:tt)*) => {
         $crate::with_subscriber(|s| {
             s.event($crate::EventMetadata::new(format!($fmt, $($args)*), $level));
         });
