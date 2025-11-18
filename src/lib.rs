@@ -1,3 +1,127 @@
+//! Extemely simple function tracer, useful for debugging.
+//!
+//! # Overview
+//!
+//! `ftrace` is a very simple library, focused on giving a complete overview
+//! into the execution path of Rust programs, by emitting spans and events.
+//!
+//! Similar to the much larger [`tracing`] crate, `ftrace` has *spans* and
+//! *events*.
+//!
+//! [`tracing`]: https://docs.rs/tracing/latest/tracing/
+//!
+//! ## Usage
+//!
+//! Before diving too deep, you should add the crate to your `Cargo.toml`:
+//! ```toml
+//! [dependencies]
+//! ftrace = "^0"
+//! ```
+//!
+//! Or use the following command to add it:
+//! ```sh
+//! cargo add ftrace
+//! ```
+//!
+//! ### Spans
+//!
+//! Spans are meant to represent a flow of execution through a program, spanning
+//! over some period of time. Each span can have zero-or-more child spans,
+//! representing sub-tasks within a larger span.
+//!
+//! When thinking of spans in common Rust programs, it's most common to mirror
+//! them up against the execution of functions, since they follow very similar
+//! logic: much like a span, a function starts execution at some point in time,
+//! perhaps executes other functions in it's body, and stops execution at some
+//! later point in time.
+//!
+//! In `ftrace`, function execution is thought to be analogous to spans, so
+//! spans are very simple to attach to a function. But, we'll talk more about
+//! that later.
+//!
+//! ### Events
+//!
+//! Unlike spans which span over a period of time, events represent a single
+//! moment in time, often inside a parent span.
+//!
+//! Events are used to signify something happening during a span. This can be
+//! an error occuring, a note-worthy change within the program or other
+//! information which can be useful.
+//!
+//! ### Macros
+//!
+//! #### Spans
+//!
+//! To mark a function as a spanning execution, you can add the `#[traced]`
+//! attribute. This provides a very easy, yet powerful, way of marking execution
+//! paths within your programs lifecycle.
+//!
+//! [`#[traced]`]: ftrace_macros::traced
+//!
+//! For example:
+//! ```rs
+//! #[traced]
+//! fn handle_request(req: Request) {
+//!     // ..
+//! }
+//! ```
+//!
+//! By default, `#[traced]` with use the [`Info`][`Level::Info`] verbosity
+//! level, if nothing else is defined. To change this, add the `level` argument
+//! to the attribute:
+//! ```
+//! use ftrace::*;
+//!
+//! #[traced(level = Debug)]
+//! pub fn my_function() {
+//!     // ...
+//! }
+//! ```
+//!
+//! #### Events
+//!
+//! Events can be created using the [`event!`] macro. It allows for a very
+//! quick way to emit some event to the subscriber:
+//! ```
+//! use ftrace::*;
+//!
+//! event!(level: Level::Info, "a new user logged in!");
+//! ```
+//!
+//! [`event!`]: crate::event!
+//!
+//! For convinience, there are also macros for each log level:
+//! ```
+//! use ftrace::*;
+//!
+//! trace!("event sent to backend");
+//! debug!("user logged in");
+//! info!("failed login attempt");
+//! warning!("non-TLS request made to backend");
+//! error!("product does not exist");
+//! ```
+//!
+//! #### Fields
+//!
+//! Both spans and fields can have fields attached to them, allow for better
+//! understanding of what is currently happening within the program. Fields
+//! effectively function as a key-value map, mapping some string-based key to a
+//! value.
+//!
+//! To attach fields with the `#[traced]` attribute, add the `fields()`
+//! argument:
+//! ```rs
+//! #[traced(level = Info, fields(method = req.method, host = req.host))]
+//! fn handle_request(req: Request) {
+//!     // ..
+//! }
+//! ```
+//!
+//! For events, the syntax is very similar:
+//! ```rs
+//! info!("failed login attempt", username = creds.username);
+//! ```
+
 use std::cell::UnsafeCell;
 use std::fmt::Display;
 use std::sync::OnceLock;

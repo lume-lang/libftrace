@@ -16,7 +16,7 @@ use crate::{EventMetadata, FieldSet, Level, SpanMetadata};
 ///
 /// Each directive has multiple different parts, which determine which items it
 /// targets:
-/// ```
+/// ```ignore
 /// target[field=value]=level
 /// ```
 ///
