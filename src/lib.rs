@@ -1,4 +1,5 @@
 use std::cell::UnsafeCell;
+use std::collections::VecDeque;
 use std::fmt::Display;
 use std::sync::OnceLock;
 
@@ -10,11 +11,14 @@ mod render;
 pub use ftrace_macros::*;
 use owo_colors::{OwoColorize, Style, Styled};
 
+pub use crate::filter::*;
 use crate::render::{RenderContext, Renderable};
 
 #[derive(Default)]
 pub struct Subscriber {
     depth: usize,
+    filter: Option<EnvFilter>,
+    current: VecDeque<SpanMetadata>,
 }
 
 unsafe impl Send for Subscriber {}
@@ -24,7 +28,11 @@ impl Subscriber {
     #[must_use = "This function returns a guard object to exit the span.
         Dropping it immediately is probably incorrect. Make sure that the returned value
         lives until the span is exited."]
-    pub fn enter_span(&mut self, metadata: SpanMetadata) -> SpanGuard {
+    pub fn enter_span(&mut self, metadata: SpanMetadata) -> Option<SpanGuard> {
+        if self.filter.as_ref().is_some_and(|f| !f.span_enabled(&metadata)) {
+            return None;
+        }
+
         let cx = RenderContext {
             depth: self.depth,
             level: metadata.level,
@@ -34,8 +42,9 @@ impl Subscriber {
         metadata.render_to(&cx, &mut stdout).unwrap();
 
         self.depth += 1;
+        self.current.push_front(metadata);
 
-        SpanGuard
+        Some(SpanGuard)
     }
 
     pub fn event(&self, metadata: EventMetadata) {
@@ -50,16 +59,32 @@ impl Subscriber {
 
     pub fn exit_span(&mut self, _span: &SpanGuard) {
         self.depth -= 1;
+        self.current.pop_front().unwrap();
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Level {
     Trace,
     Debug,
     Info,
     Warn,
     Error,
+}
+
+impl TryFrom<&str> for Level {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, ()> {
+        match value.to_lowercase().as_str() {
+            "trace" => Ok(Level::Trace),
+            "debug" => Ok(Level::Debug),
+            "info" => Ok(Level::Info),
+            "warn" => Ok(Level::Warn),
+            "error" => Ok(Level::Error),
+            _ => return Err(()),
+        }
+    }
 }
 
 pub struct SpanMetadata {
@@ -152,4 +177,12 @@ pub fn with_subscriber<F: FnOnce(&mut Subscriber) -> R, R>(f: F) -> R {
     });
 
     unsafe { f(&mut *global.inner.get()) }
+}
+
+/// Sets the current filter of the global trace subscriber.
+///
+/// To create a [`EnvFilter`] instance, see [`from_env`], [`from_default_env`]
+/// or [`parse`].
+pub fn set_filter(filter: EnvFilter) {
+    with_subscriber(|subscriber| subscriber.filter = Some(filter));
 }
