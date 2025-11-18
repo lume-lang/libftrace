@@ -14,7 +14,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-libftrace_macros = { path = "macros", version = "=0.0.2" }
+libftrace_macros = { path = "macros", version = "=0.0.3" }
 owo-colors = { version = "4.2", features = ["supports-colors"] }
 time = { version = "0.3.2", features = ["formatting"] }
 
@@ -26,7 +26,7 @@ enabled = ["libftrace_macros/enabled"]
 members = ["macros"]
 
 [workspace.package]
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Max T. Kristiansen <me@maxtrier.dk>"]
 description = "Extemely simple function tracer, useful for debugging"
 keywords = ["tracing", "trace", "debug"]
