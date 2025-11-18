@@ -127,7 +127,15 @@ use std::fmt::Display;
 use std::sync::OnceLock;
 
 #[macro_use]
+#[path = "enabled/macros.rs"]
+#[cfg(feature = "enabled")]
 pub mod macros;
+
+#[macro_use]
+#[path = "disabled/macros.rs"]
+#[cfg(not(feature = "enabled"))]
+pub mod macros;
+
 pub mod filter;
 mod render;
 
