@@ -211,7 +211,7 @@ impl TryFrom<&str> for Level {
             "info" => Ok(Level::Info),
             "warn" => Ok(Level::Warn),
             "error" => Ok(Level::Error),
-            _ => return Err(()),
+            _ => Err(()),
         }
     }
 }
