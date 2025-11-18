@@ -1,4 +1,4 @@
-use ftrace::*;
+use libftrace::*;
 
 #[derive(Debug)]
 struct User {
@@ -16,15 +16,15 @@ fn process_user(user: User) {
 }
 
 fn main() {
-    let filter = ftrace::filter::from_default_env()
+    let filter = libftrace::filter::from_default_env()
         .or_else(|err| {
             eprintln!("could not parse filter: {err:?}");
 
-            ftrace::filter::parse("info")
+            libftrace::filter::parse("info")
         })
         .unwrap();
 
-    ftrace::set_filter(filter);
+    libftrace::set_filter(filter);
 
     process_user(User {
         name: String::from("John Doe"),

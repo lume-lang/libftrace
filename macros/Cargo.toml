@@ -1,5 +1,5 @@
 [package]
-name = "ftrace_macros"
+name = "libftrace_macros"
 
 version = { workspace = true }
 authors = { workspace = true }

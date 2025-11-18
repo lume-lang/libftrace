@@ -1,4 +1,4 @@
-use ftrace::*;
+use libftrace::*;
 
 #[derive(Debug)]
 struct User {

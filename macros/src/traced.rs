@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{ToTokens, quote, quote_spanned};
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::*;
@@ -193,9 +193,9 @@ fn build_block(args: &TracedArgs, input: &ItemFn) -> proc_macro2::TokenStream {
     let Signature { ident, .. } = sig;
 
     let level = if let Some(level) = &args.level {
-        quote_spanned! { level.span() => ::ftrace::#level }
+        quote_spanned! { level.span() => ::libftrace::#level }
     } else {
-        quote_spanned! { input.span() => ::ftrace::Level::Info }
+        quote_spanned! { input.span() => ::libftrace::Level::Info }
     };
 
     let fields = if let Some(fields) = &args.fields {
@@ -220,9 +220,9 @@ fn build_block(args: &TracedArgs, input: &ItemFn) -> proc_macro2::TokenStream {
     };
 
     let enter_span_guard = quote! {
-        let __guard = ftrace::with_subscriber(|s| {
+        let __guard = libftrace::with_subscriber(|s| {
             s.enter_span(
-                ftrace::SpanMetadata::new(
+                libftrace::SpanMetadata::new(
                     concat!(module_path!(), "::", stringify!(#ident)),
                     #level
                 )

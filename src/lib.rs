@@ -2,10 +2,10 @@
 //!
 //! # Overview
 //!
-//! `ftrace` is a very simple library, focused on giving a complete overview
+//! `libftrace` is a very simple library, focused on giving a complete overview
 //! into the execution path of Rust programs, by emitting spans and events.
 //!
-//! Similar to the much larger [`tracing`] crate, `ftrace` has *spans* and
+//! Similar to the much larger [`tracing`] crate, `libftrace` has *spans* and
 //! *events*.
 //!
 //! [`tracing`]: https://docs.rs/tracing/latest/tracing/
@@ -15,12 +15,12 @@
 //! Before diving too deep, you should add the crate to your `Cargo.toml`:
 //! ```toml
 //! [dependencies]
-//! ftrace = "^0"
+//! libftrace = "^0"
 //! ```
 //!
 //! Or use the following command to add it:
 //! ```sh
-//! cargo add ftrace
+//! cargo add libftrace
 //! ```
 //!
 //! ### Spans
@@ -35,7 +35,7 @@
 //! perhaps executes other functions in it's body, and stops execution at some
 //! later point in time.
 //!
-//! In `ftrace`, function execution is thought to be analogous to spans, so
+//! In `libftrace`, function execution is thought to be analogous to spans, so
 //! spans are very simple to attach to a function. But, we'll talk more about
 //! that later.
 //!
@@ -70,7 +70,7 @@
 //! level, if nothing else is defined. To change this, add the `level` argument
 //! to the attribute:
 //! ```
-//! use ftrace::*;
+//! use libftrace::*;
 //!
 //! #[traced(level = Debug)]
 //! pub fn my_function() {
@@ -83,7 +83,7 @@
 //! Events can be created using the [`event!`] macro. It allows for a very
 //! quick way to emit some event to the subscriber:
 //! ```
-//! use ftrace::*;
+//! use libftrace::*;
 //!
 //! event!(level: Level::Info, "a new user logged in!");
 //! ```
@@ -92,7 +92,7 @@
 //!
 //! For convinience, there are also macros for each log level:
 //! ```
-//! use ftrace::*;
+//! use libftrace::*;
 //!
 //! trace!("event sent to backend");
 //! debug!("user logged in");
@@ -131,7 +131,7 @@ pub mod macros;
 pub mod filter;
 mod render;
 
-pub use ftrace_macros::*;
+pub use libftrace_macros::*;
 use owo_colors::{OwoColorize, Style, Styled};
 
 pub use crate::filter::*;

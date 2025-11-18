@@ -1,4 +1,4 @@
-use ftrace::*;
+use libftrace::*;
 
 fn main() {
     trace!("event sent to backend", event = "ad_hover");

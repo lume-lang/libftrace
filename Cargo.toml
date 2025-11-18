@@ -1,5 +1,5 @@
 [package]
-name = "ftrace"
+name = "libftrace"
 readme = "README.md"
 exclude = ["examples/*.png"]
 
@@ -14,7 +14,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-ftrace_macros = { path = "macros", version = "=0.0.1" }
+libftrace_macros = { path = "macros", version = "=0.0.1" }
 owo-colors = { version = "4.2", features = ["supports-colors"] }
 time = { version = "0.3.2", features = ["formatting"] }
 
@@ -30,7 +30,7 @@ categories = [
     "development-tools::build-utils",
     "visualization",
 ]
-repository = "https://github.com/lume-lang/ftrace"
+repository = "https://github.com/lume-lang/libftrace"
 license = "MIT"
 edition = "2024"
 rust-version = "1.85.0"
