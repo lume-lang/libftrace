@@ -1,5 +1,4 @@
 use std::cell::UnsafeCell;
-use std::collections::VecDeque;
 use std::fmt::Display;
 use std::sync::OnceLock;
 
@@ -18,13 +17,16 @@ use crate::render::{RenderContext, Renderable};
 pub struct Subscriber {
     depth: usize,
     filter: Option<EnvFilter>,
-    current: VecDeque<SpanMetadata>,
 }
 
 unsafe impl Send for Subscriber {}
 unsafe impl Sync for Subscriber {}
 
 impl Subscriber {
+    /// Enter a new span, containing the given [`SpanMetadata`] instance.
+    ///
+    /// This method returns a guard for the span. When the guard is dropped,
+    /// the span is exited. If this is not intended, keep the guard in scope.
     #[must_use = "This function returns a guard object to exit the span.
         Dropping it immediately is probably incorrect. Make sure that the returned value
         lives until the span is exited."]
@@ -42,11 +44,11 @@ impl Subscriber {
         metadata.render_to(&cx, &mut stdout).unwrap();
 
         self.depth += 1;
-        self.current.push_front(metadata);
 
         Some(SpanGuard)
     }
 
+    /// Emit the given event in the current span.
     pub fn event(&self, metadata: EventMetadata) {
         if self.filter.as_ref().is_some_and(|f| !f.event_enabled(&metadata)) {
             return;
@@ -63,7 +65,6 @@ impl Subscriber {
 
     pub fn exit_span(&mut self, _span: &SpanGuard) {
         self.depth -= 1;
-        self.current.pop_front().unwrap();
     }
 }
 
