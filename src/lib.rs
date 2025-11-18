@@ -1,9 +1,10 @@
 use std::cell::UnsafeCell;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::sync::OnceLock;
 
 #[macro_use]
 pub mod macros;
+pub mod filter;
 mod render;
 
 pub use ftrace_macros::*;
@@ -79,7 +80,7 @@ impl SpanMetadata {
         }
     }
 
-    pub fn with_field(mut self, key: &'static str, value: impl Debug + 'static) -> Self {
+    pub fn with_field(mut self, key: &'static str, value: impl Display + 'static) -> Self {
         self.fields.add(key, value);
         self
     }
@@ -103,7 +104,7 @@ impl EventMetadata {
         }
     }
 
-    pub fn with_field(mut self, key: &'static str, value: impl Debug + 'static) -> Self {
+    pub fn with_field(mut self, key: &'static str, value: impl Display + 'static) -> Self {
         self.fields.add(key, value);
         self
     }
@@ -115,16 +116,16 @@ struct FieldSet {
 }
 
 impl FieldSet {
-    pub fn add(&mut self, key: &'static str, value: impl Debug + 'static) {
+    pub fn add(&mut self, key: &'static str, value: impl Display + 'static) {
         self.inner.push((key, Value(Box::new(value))));
     }
 }
 
-pub struct Value(Box<dyn Debug>);
+pub struct Value(Box<dyn Display>);
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(self.0.as_ref(), f)
+        Display::fmt(self.0.as_ref(), f)
     }
 }
 
