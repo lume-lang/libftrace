@@ -1,6 +1,6 @@
 # `libftrace`
 
-[![CI](https://img.shields.io/github/actions/workflow/status/lume-lang/libftrace/build?style=for-the-badge)](https://github.com/lume-lang/libftrace/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/lume-lang/libftrace/release-plz?style=for-the-badge)](https://github.com/lume-lang/libftrace/actions)
 [![crates.io](https://img.shields.io/crates/v/libftrace?style=for-the-badge&label=crates.io)](https://crates.io/crates/libftrace)
 [![docs.rs](https://img.shields.io/docsrs/libftrace?style=for-the-badge&label=docs.rs)](https://docs.rs/libftrace)
 
