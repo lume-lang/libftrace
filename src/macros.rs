@@ -1,6 +1,6 @@
 /// Creates a new event in the current span.
 ///
-/// The event macro is invoked with a [`ftrace::Level`], along with a message.
+/// The event macro is invoked with a [`crate::Level`], along with a message.
 /// The message may be a format string, followed by zero-or-more arguments.
 #[macro_export]
 macro_rules! event {
