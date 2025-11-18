@@ -18,6 +18,10 @@ libftrace_macros = { path = "macros", version = "=0.0.1" }
 owo-colors = { version = "4.2", features = ["supports-colors"] }
 time = { version = "0.3.2", features = ["formatting"] }
 
+[features]
+default = ["enabled"]
+enabled = ["libftrace_macros/enabled"]
+
 [workspace]
 members = ["macros"]
 

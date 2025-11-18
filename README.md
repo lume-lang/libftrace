@@ -24,3 +24,13 @@ fn handle_request(req: Request) {
     // ..
 }
 ```
+
+## Development Usage
+
+Tracing attributes can be expensive for performance, so `ftrace` includes a way to disable it. To disable it, disable the `enable` feature (which is the only default feature):
+```toml
+[dependencies]
+libftrace = { version = "^0", default-features = false }
+```
+
+Currently, the dependencies of `ftrace` are still pulled, but there will be no performance cost of using it, while disabled.
