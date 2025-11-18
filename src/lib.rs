@@ -48,6 +48,10 @@ impl Subscriber {
     }
 
     pub fn event(&self, metadata: EventMetadata) {
+        if self.filter.as_ref().is_some_and(|f| !f.event_enabled(&metadata)) {
+            return;
+        }
+
         let cx = RenderContext {
             depth: self.depth,
             level: metadata.level,

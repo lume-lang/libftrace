@@ -1,4 +1,4 @@
-use crate::{Level, SpanMetadata};
+use crate::{EventMetadata, FieldSet, Level, SpanMetadata};
 
 /// A filter for filtering out unwanted spans and events, based on a set of
 /// directives.
@@ -52,14 +52,11 @@ pub struct EnvFilter {
 
 impl EnvFilter {
     /// Creates a new [`EnvFilter`] from the given list of [`Directive`]s.
-    fn from_directives(directives: Vec<Directive>) -> Self {
-        let default_level = directives.iter().find_map(|d| {
-            if d.module.is_none() && d.fields.is_empty() {
-                Some(d.level)
-            } else {
-                None
-            }
-        });
+    fn from_directives(mut directives: Vec<Directive>) -> Self {
+        let default_level = directives
+            .iter()
+            .position(|d| d.module.is_none() && d.fields.is_empty())
+            .map(|idx| directives.remove(idx).level);
 
         EnvFilter {
             directives,
@@ -335,10 +332,43 @@ impl EnvFilter {
         false
     }
 
+    /// Attempts to determine whether the given [`EventMetadata`] should be
+    /// emitted, given the current directives of the filter.
+    pub fn event_enabled(&self, event: &EventMetadata) -> bool {
+        let directives: Vec<&Directive> = self.directives_for_event(event).collect();
+
+        if directives.is_empty() {
+            if let Some(default_level) = self.default_level {
+                return default_level <= event.level;
+            }
+
+            // If there's no applicable directives and no default level,
+            // the event should not be emitted.
+            return false;
+        }
+
+        // If any of the directive filters are met, the event should be emitted.
+        for directive in directives {
+            if event.level >= directive.level {
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Returns an iterator of all the directives which would handle the given
     /// [`SpanMetadata`].
     fn directives_for_span(&self, span: &SpanMetadata) -> impl Iterator<Item = &Directive> {
         self.directives.iter().filter(|dir| dir.handles_span(span))
+    }
+
+    /// Returns an iterator of all the directives which would handle the given
+    /// [`EventMetadata`].
+    fn directives_for_event(&self, event: &EventMetadata) -> impl Iterator<Item = &Directive> {
+        self.directives
+            .iter()
+            .filter(|dir| dir.handles_field_set(&event.fields))
     }
 }
 
@@ -350,8 +380,14 @@ impl Directive {
             return false;
         }
 
+        self.handles_field_set(&span.fields)
+    }
+
+    /// Determines whether the current [`Directive`] would handle the given
+    /// [`FieldSet`].
+    fn handles_field_set(&self, field_set: &FieldSet) -> bool {
         for filter in &self.fields {
-            let Some((_, field)) = span.fields.inner.iter().find(|(k, _)| *k == filter.key) else {
+            let Some((_, field)) = field_set.inner.iter().find(|(k, _)| *k == filter.key) else {
                 return false;
             };
 
