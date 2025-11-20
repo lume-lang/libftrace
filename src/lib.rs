@@ -123,6 +123,7 @@
 //! ```
 
 use std::cell::UnsafeCell;
+use std::collections::VecDeque;
 use std::fmt::Display;
 use std::sync::OnceLock;
 
@@ -149,6 +150,7 @@ use crate::render::{RenderContext, Renderable};
 pub struct Subscriber {
     depth: usize,
     filter: Option<EnvFilter>,
+    current: VecDeque<SpanMetadata>,
 }
 
 unsafe impl Send for Subscriber {}
@@ -176,13 +178,20 @@ impl Subscriber {
         metadata.render_to(&cx, &mut stdout).unwrap();
 
         self.depth += 1;
+        self.current.push_front(metadata);
 
         Some(SpanGuard)
     }
 
     /// Emit the given event in the current span.
     pub fn event(&self, metadata: EventMetadata) {
-        if self.filter.as_ref().is_some_and(|f| !f.event_enabled(&metadata)) {
+        let current_span = self.current.front();
+
+        if self
+            .filter
+            .as_ref()
+            .is_some_and(|f| !f.event_enabled(&metadata, current_span))
+        {
             return;
         }
 
@@ -196,6 +205,7 @@ impl Subscriber {
     }
 
     pub fn exit_span(&mut self, _span: &SpanGuard) {
+        self.current.pop_front();
         self.depth -= 1;
     }
 }
