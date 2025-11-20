@@ -381,7 +381,7 @@ impl EnvFilter {
         parent_span: Option<&SpanMetadata>,
     ) -> impl Iterator<Item = &Directive> {
         self.directives.iter().filter(move |dir| {
-            parent_span.map_or(false, |span| dir.handles_span(span)) && dir.handles_field_set(&event.fields)
+            parent_span.is_some_and(|span| dir.handles_span(span)) && dir.handles_field_set(&event.fields)
         })
     }
 }
