@@ -186,12 +186,12 @@ impl<'src> Parser<'src> {
     }
 
     #[inline]
-    fn identifier(&mut self) -> Option<&'src str> {
+    fn take_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> Option<&'src str> {
         let start = self.idx;
         let mut ci = self.slice[self.idx..].chars().peekable();
 
         while let Some(c) = ci.peek()
-            && c.is_ascii_alphabetic()
+            && f(*c)
         {
             self.idx += 1;
             ci.next();
@@ -202,6 +202,16 @@ impl<'src> Parser<'src> {
         }
 
         Some(&self.slice[start..self.idx])
+    }
+
+    #[inline]
+    fn identifier(&mut self) -> Option<&'src str> {
+        self.take_while(|c| c.is_ascii_alphabetic())
+    }
+
+    #[inline]
+    fn module_name(&mut self) -> Option<&'src str> {
+        self.take_while(|c| c.is_ascii_alphanumeric() || matches!(c, ':' | '-' | '_'))
     }
 
     #[inline]
@@ -217,7 +227,7 @@ impl<'src> Parser<'src> {
             }
         }
 
-        self.identifier()
+        self.take_while(|c| c.is_ascii_alphanumeric())
     }
 
     pub fn parse_directive(&mut self) -> Result<Directive, ParseError> {
@@ -227,7 +237,7 @@ impl<'src> Parser<'src> {
             level: Level::Info,
         };
 
-        if let Some(module_str) = self.identifier() {
+        if let Some(module_str) = self.module_name() {
             directive.module = Some(module_str.to_string());
         }
 
@@ -334,8 +344,8 @@ impl EnvFilter {
 
     /// Attempts to determine whether the given [`EventMetadata`] should be
     /// emitted, given the current directives of the filter.
-    pub fn event_enabled(&self, event: &EventMetadata) -> bool {
-        let directives: Vec<&Directive> = self.directives_for_event(event).collect();
+    pub fn event_enabled(&self, event: &EventMetadata, parent_span: Option<&SpanMetadata>) -> bool {
+        let directives: Vec<&Directive> = self.directives_for_event(event, parent_span).collect();
 
         if directives.is_empty() {
             if let Some(default_level) = self.default_level {
@@ -365,10 +375,14 @@ impl EnvFilter {
 
     /// Returns an iterator of all the directives which would handle the given
     /// [`EventMetadata`].
-    fn directives_for_event(&self, event: &EventMetadata) -> impl Iterator<Item = &Directive> {
-        self.directives
-            .iter()
-            .filter(|dir| dir.handles_field_set(&event.fields))
+    fn directives_for_event(
+        &self,
+        event: &EventMetadata,
+        parent_span: Option<&SpanMetadata>,
+    ) -> impl Iterator<Item = &Directive> {
+        self.directives.iter().filter(move |dir| {
+            parent_span.map_or(false, |span| dir.handles_span(span)) && dir.handles_field_set(&event.fields)
+        })
     }
 }
 
